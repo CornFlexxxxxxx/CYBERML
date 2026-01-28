@@ -1,0 +1,943 @@
+\documentclass[12pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+% Page geometry
+\geometry{
+    left=2.5cm,
+    right=2.5cm,
+    top=2.5cm,
+    bottom=2.5cm
+}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{CYBERML Project Report}
+\fancyhead[R]{2025-2026}
+\fancyfoot[C]{\thepage}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue
+}
+
+% Code listing style
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    language=Python,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{red}
+}
+
+\begin{document}
+
+% Title page
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\LARGE\bfseries CYBERML Project Report\par}
+    \vspace{1cm}
+    {\Large Classification and Anomaly Detection for Tracking Attacks in Industrial IoT Networks\par}
+    \vspace{2cm}
+    
+    {\large\bfseries Dataset:\par}
+    {\large CIC IIoT Dataset 2025 (DataSense)\par}
+    \vspace{2cm}
+    
+    {\large
+    \textbf{Academic Year:} 2025-2026\\[0.5cm]
+    \textbf{Course:} MLCYBER - SCIA\\[1cm]
+    
+    \textbf{Group Number:} 6\\[0.5cm]
+    \textbf{Group Name:} Cricri Lovers\\[0.5cm]
+    \textbf{Group Members:}\\
+    Gabriel MONTEILLARD\\
+    Joric HANTZBERG\\
+    Maxime RUFF\\[1cm]
+    }
+    
+    \vfill
+    {\large January 2026\par}
+\end{titlepage}
+
+% Table of contents
+\tableofcontents
+\newpage
+
+% Abstract
+\begin{abstract}
+This report presents a comprehensive analysis of cybersecurity attack detection in Industrial IoT (IIoT) networks using machine learning techniques. We implemented and evaluated seven machine learning algorithms—four supervised classification methods (Random Forest, Logistic Regression, Decision Tree, and XGBoost) and three unsupervised anomaly detection methods (Isolation Forest, MiniBatch K-Means, Elliptic Envelope)—on the CIC IIoT Dataset 2025. The dataset contains 227,191 samples with 71 features representing network traffic and sensor data from a realistic IIoT testbed. Our results demonstrate that supervised methods achieve excellent performance for known attack types, with XGBoost achieving 99.7\% precision and 93.2\% balanced accuracy for binary classification. The best performing anomaly detector (Elliptic Envelope) achieved 78.9\% balanced accuracy. Additionally, we evaluated model robustness through adversarial attacks, revealing critical vulnerabilities that must be addressed for production deployment. These findings provide valuable insights for deploying machine learning-based intrusion detection systems in industrial environments.
+\end{abstract}
+
+\newpage
+
+% 1. Introduction
+\section{Introduction}
+
+\subsection{Project Objectives}
+
+The primary objective of this project is to design, deploy, and evaluate a comprehensive data processing chain for cybersecurity data analysis in Industrial IoT (IIoT) environments. The increasing adoption of IoT devices in industrial settings has created new attack surfaces that require sophisticated detection mechanisms.
+
+Specifically, we aim to:
+\begin{itemize}
+    \item Implement and evaluate classification algorithms for attack detection
+    \item Develop anomaly detection systems using unsupervised learning
+    \item Compare the performance of multiple machine learning approaches
+    \item Provide insights into cybersecurity threats in IIoT networks
+    \item \textbf{Evaluate model robustness against adversarial attacks (Objective 2)}
+\end{itemize}
+
+\subsection{Dataset Selection}
+
+We selected the \textbf{CIC IIoT Dataset 2025} (DataSense), a real-time sensor-based benchmark dataset for attack analysis in Industrial IoT environments. This dataset represents one of the most comprehensive and recent cybersecurity datasets available for IIoT research, created by the Canadian Institute for Cybersecurity (CIC).
+
+\subsection{Methodology Overview}
+
+Our approach consists of four main phases:
+\begin{enumerate}
+    \item \textbf{Data Exploration and Characterization}: Understanding the dataset structure, features, and class distributions
+    \item \textbf{Supervised Classification}: Training and evaluating four complementary classification algorithms
+    \item \textbf{Unsupervised Anomaly Detection}: Implementing three unsupervised methods to detect attacks without labeled data
+    \item \textbf{Adversarial Robustness Testing}: Evaluating model vulnerability to adversarial perturbations
+\end{enumerate}
+
+\newpage
+
+% 2. Dataset Overview
+\section{Dataset Overview}
+
+\subsection{Dataset Description}
+
+The CIC IIoT Dataset 2025 (DataSense) was created by the Canadian Institute for Cybersecurity and contains data from a sophisticated testbed environment featuring:
+
+\begin{itemize}
+    \item \textbf{Testbed Environment}: 40+ interconnected devices including industrial sensors, IoT devices, edge devices, and network equipment
+    \item \textbf{Attack Categories}: 50 distinct attack types across 7 categories
+    \item \textbf{Time Window}: 1-second aggregated features
+    \item \textbf{Data Types}: Both network traffic features and sensor data features
+\end{itemize}
+
+\subsection{Dataset Composition}
+
+\begin{table}[H]
+\centering
+\caption{Dataset Composition}
+\begin{tabular}{@{}lr@{}}
+\toprule
+\textbf{Category} & \textbf{Count} \\ \midrule
+Total Samples & 227,191 \\
+Benign Samples & 136,800 (60.2\%) \\
+Attack Samples & 90,391 (39.8\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Attack Category Distribution}
+
+The dataset contains 7 attack categories with the following distribution:
+
+\begin{table}[H]
+\centering
+\caption{Attack Categories}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Attack Category} & \textbf{Count} & \textbf{Percentage} \\ \midrule
+DDoS (Distributed Denial of Service) & 41,037 & 45.4\% \\
+DoS (Denial of Service) & 40,136 & 44.4\% \\
+Reconnaissance & 5,242 & 5.8\% \\
+MITM (Man-in-the-Middle) & 2,440 & 2.7\% \\
+Web Attacks & 1,085 & 1.2\% \\
+Brute Force & 271 & 0.3\% \\
+Malware & 180 & 0.2\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Feature Space}
+
+\begin{itemize}
+    \item \textbf{Total Features}: 94 columns
+    \item \textbf{Numeric Features}: 71 (used for analysis)
+    \item \textbf{Metadata}: 23 columns (device info, timestamps, labels)
+\end{itemize}
+
+\textbf{Key Network Features}:
+\begin{itemize}
+    \item Packet statistics (count, size, intervals)
+    \item TCP flags (SYN, ACK, FIN, RST, PSH, URG)
+    \item IP characteristics (length, flags, TTL)
+    \item Protocol information
+    \item Port and MAC address statistics
+\end{itemize}
+
+\newpage
+
+% 3. Data Handling Chain
+\section{Data Handling Chain}
+
+\subsection{Architecture Overview}
+
+Our data processing pipeline consists of the following stages:
+
+\begin{figure}[H]
+\centering
+\begin{verbatim}
+Raw CSV Files → Data Loading → Preprocessing → Feature Engineering 
+    → Model Training → Evaluation → Results Analysis
+\end{verbatim}
+\caption{Data Processing Pipeline}
+\end{figure}
+
+\subsection{Data Loading}
+
+\textbf{Input Files}:
+\begin{itemize}
+    \item \texttt{attack\_samples\_1sec.csv}: 90,391 samples with attack labels
+    \item \texttt{benign\_samples\_1sec.csv}: 136,800 samples of normal traffic
+\end{itemize}
+
+Both files contain identical feature structures with 1-second time-windowed aggregations.
+
+\subsection{Preprocessing Steps}
+
+\begin{enumerate}
+    \item \textbf{Data Combination}: Merge attack and benign datasets with appropriate labels
+    \item \textbf{Feature Selection}: Exclude non-numeric and metadata columns
+    \item \textbf{Missing Value Handling}: No missing values detected in the dataset
+    \item \textbf{Infinite Value Handling}: Replace infinite values with NaN, then fill with 0
+    \item \textbf{Feature Scaling}: StandardScaler normalization (zero mean, unit variance)
+\end{enumerate}
+
+\subsection{Feature Engineering}
+
+\textbf{Excluded Features}:
+\begin{itemize}
+    \item Device identifiers (device\_name, device\_mac)
+    \item Timestamp information
+    \item String-based features (IP addresses, MAC addresses, ports, protocols)
+    \item Label columns (except target variable)
+\end{itemize}
+
+\textbf{Final Feature Set}: 71 numeric features
+
+\subsection{Train-Test Split}
+
+\begin{table}[H]
+\centering
+\caption{Data Split Configuration}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Set} & \textbf{Samples} & \textbf{Percentage} \\ \midrule
+Training Set & 159,033 & 70\% \\
+Test Set & 68,158 & 30\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+    \item \textbf{Stratification}: Maintained class distribution in both sets
+    \item \textbf{Random Seed}: 42 (for reproducibility)
+\end{itemize}
+
+\newpage
+
+% 4. Dataset Characterization
+\section{Dataset Characterization}
+
+\subsection{Data Quality Assessment}
+
+\textbf{Completeness}:
+\begin{itemize}
+    \item Missing values: 0 (100\% complete)
+    \item Infinite values: Present in some features, handled during preprocessing
+\end{itemize}
+
+\textbf{Consistency}:
+\begin{itemize}
+    \item All samples have identical feature structures
+    \item No duplicate samples detected
+    \item Consistent data types across features
+\end{itemize}
+
+\subsection{Feature Characteristics}
+
+\textbf{Zero-Heavy Features} ($>80\%$ zeros):
+
+\begin{table}[H]
+\centering
+\caption{Features with High Zero Percentage}
+\begin{tabular}{@{}lr@{}}
+\toprule
+\textbf{Feature} & \textbf{Zero \%} \\ \midrule
+network\_header-length\_std\_deviation & 99.9\% \\
+network\_tcp-flags-urg\_count & 99.5\% \\
+network\_mss\_std\_deviation & 98.8\% \\
+log\_interval-messages & 98.7\% \\
+log\_data-ranges\_std\_deviation & 97.6\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These features have limited discriminative power but are retained for completeness.
+
+\subsection{Class Balance Analysis}
+
+\textbf{Binary Classification} (Benign vs Attack):
+\begin{itemize}
+    \item Imbalanced: 60\% benign, 40\% attack
+    \item Imbalance ratio: 1:1.51
+    \item Assessment: Moderately imbalanced, suitable for standard ML techniques
+\end{itemize}
+
+\textbf{Multi-Class Classification} (Attack Categories):
+\begin{itemize}
+    \item Highly imbalanced
+    \item Dominant classes: DDoS and DoS (90\% of attacks)
+    \item Minority classes: Brute Force and Malware ($<1\%$ of attacks)
+    \item Requires careful evaluation metrics (balanced accuracy, MCC)
+\end{itemize}
+
+\subsection{Attack Type Distribution}
+
+\textbf{Most Common Attacks}:
+\begin{enumerate}
+    \item SYN Flood (DDoS/DoS): Ports 80, 1883
+    \item RST-FIN Flood (DDoS/DoS): Ports 80, 1883
+    \item UDP Flood (DDoS/DoS): Ports 80, 1883
+    \item ICMP Flood (DDoS/DoS)
+    \item TCP Flood (DDoS/DoS)
+\end{enumerate}
+
+\textbf{Targeted Devices}:
+\begin{itemize}
+    \item Edge devices: Primary targets
+    \item Routers and switches: Frequent targets
+    \item IoT cameras: Moderate targeting
+    \item Sensors: Lower targeting frequency
+\end{itemize}
+
+\newpage
+
+% 5. Classification Methods
+\section{Classification Methods}
+
+\subsection{Overview}
+
+We implemented four complementary supervised classification algorithms:
+\begin{enumerate}
+    \item \textbf{Random Forest}: Ensemble learning with decision trees
+    \item \textbf{Logistic Regression}: Linear probabilistic classifier
+    \item \textbf{Decision Tree}: Single decision tree classifier
+    \item \textbf{XGBoost}: Gradient boosting framework
+\end{enumerate}
+
+Each algorithm was evaluated on both binary (benign vs attack) and multi-class (7 attack categories + benign) classification tasks.
+
+\subsection{Random Forest}
+
+\textbf{Algorithm Description}:
+Random Forest is an ensemble learning method that constructs multiple decision trees during training and outputs the mode of classes for classification.
+
+\textbf{Hyperparameters}:
+\begin{itemize}
+    \item Number of estimators: 100
+    \item Random state: 42
+    \item n\_jobs: -1 (parallel processing)
+    \item Default parameters for other settings
+\end{itemize}
+
+\textbf{Advantages}:
+\begin{itemize}
+    \item Handles high-dimensional data well
+    \item Robust to overfitting
+    \item Provides feature importance
+    \item No need for feature scaling (applied for consistency)
+\end{itemize}
+
+\subsection{Logistic Regression}
+
+\textbf{Algorithm Description}:
+Logistic Regression is a linear model that uses a logistic function to model binary or multi-class classification problems.
+
+\textbf{Hyperparameters}:
+\begin{itemize}
+    \item Maximum iterations: 1000
+    \item Random state: 42
+    \item n\_jobs: -1 (parallel processing)
+    \item Default solver (lbfgs)
+\end{itemize}
+
+\textbf{Advantages}:
+\begin{itemize}
+    \item Fast training and prediction
+    \item Interpretable coefficients
+    \item Probabilistic output
+    \item Low computational requirements
+\end{itemize}
+
+\subsection{Decision Tree}
+
+\textbf{Algorithm Description}:
+Decision Tree is a non-parametric supervised learning method that learns decision rules inferred from data features.
+
+\textbf{Hyperparameters}:
+\begin{itemize}
+    \item Maximum depth: 20 (to prevent overfitting)
+    \item Random state: 42
+    \item Default criterion (gini)
+\end{itemize}
+
+\textbf{Advantages}:
+\begin{itemize}
+    \item Easy to understand and interpret
+    \item Requires little data preprocessing
+    \item Can handle non-linear relationships
+    \item Fast prediction time
+\end{itemize}
+
+\subsection{XGBoost}
+
+\textbf{Algorithm Description}:
+XGBoost (eXtreme Gradient Boosting) is an optimized gradient boosting framework that uses decision trees as base learners. It builds trees sequentially, with each tree correcting errors from the previous ensemble.
+
+\textbf{Hyperparameters}:
+\begin{itemize}
+    \item Number of estimators: 100
+    \item Random state: 42
+    \item n\_jobs: -1 (parallel processing)
+    \item eval\_metric: logloss (binary) / mlogloss (multi-class)
+\end{itemize}
+
+\textbf{Advantages}:
+\begin{itemize}
+    \item State-of-the-art performance on tabular data
+    \item Built-in regularization to prevent overfitting
+    \item Handles missing values automatically
+    \item Highly optimized for speed and memory efficiency
+\end{itemize}
+
+\newpage
+
+% 6. Anomaly Detection Methods
+\section{Anomaly Detection Methods}
+
+\subsection{Overview}
+
+We implemented three unsupervised anomaly detection algorithms:
+\begin{enumerate}
+    \item \textbf{Isolation Forest}: Tree-based anomaly detection
+    \item \textbf{MiniBatch K-Means}: Clustering-based approach
+    \item \textbf{Elliptic Envelope}: Statistical outlier detection
+\end{enumerate}
+
+These methods detect attacks without using labels during training.
+
+\subsection{Isolation Forest}
+
+\textbf{Algorithm Description}:
+Isolation Forest identifies anomalies by isolating observations through random partitioning, based on the principle that anomalies are few and different.
+
+\textbf{Hyperparameters}:
+\begin{itemize}
+    \item Contamination: 0.398 (proportion of attacks in dataset)
+    \item Random state: 42
+    \item n\_jobs: -1 (parallel processing)
+\end{itemize}
+
+\textbf{Key Concept}:
+Anomalies require fewer splits to isolate than normal points.
+
+\subsection{MiniBatch K-Means}
+
+\textbf{Algorithm Description}:
+MiniBatch K-Means is a variant of K-Means that uses mini-batches to reduce computation time. We use it to cluster data into 2 groups (normal and anomaly).
+
+\textbf{Hyperparameters}:
+\begin{itemize}
+    \item Number of clusters: 2
+    \item Batch size: 1000
+    \item Random state: 42
+    \item n\_init: 3
+\end{itemize}
+
+\textbf{Key Concept}:
+Assumes the smaller cluster represents anomalies.
+
+\subsection{Elliptic Envelope}
+
+\textbf{Algorithm Description}:
+Elliptic Envelope fits a robust covariance estimate to the data and classifies observations as outliers if they are far from the center.
+
+\textbf{Hyperparameters}:
+\begin{itemize}
+    \item Contamination: 0.398
+    \item Random state: 42
+\end{itemize}
+
+\textbf{Key Concept}:
+Assumes data follows a Gaussian distribution and identifies outliers based on Mahalanobis distance.
+
+\newpage
+
+% 7. Results and Analysis
+\section{Results and Analysis}
+
+\subsection{Classification Results}
+
+\subsubsection{Binary Classification (Benign vs Attack)}
+
+\textbf{Performance Summary}:
+
+\begin{table}[H]
+\centering
+\caption{Binary Classification Results}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Model} & \textbf{Precision} & \textbf{Recall} & \textbf{AUPRC} & \textbf{Bal. Acc.} & \textbf{MCC} \\ \midrule
+Random Forest & 0.9807 & 0.8679 & 0.9417 & 0.9283 & 0.8778 \\
+Logistic Regression & 0.9766 & 0.7650 & 0.9102 & 0.8764 & 0.7956 \\
+Decision Tree & 0.9933 & 0.8637 & 0.9368 & 0.9299 & 0.8848 \\
+\textbf{XGBoost} & \textbf{0.9972} & \textbf{0.8651} & \textbf{0.9445} & \textbf{0.9318} & \textbf{0.8890} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Analysis}:
+
+The binary classification results demonstrate excellent performance across all four algorithms:
+
+\begin{itemize}
+    \item \textbf{XGBoost} achieved the best overall performance with 99.72\% precision, 93.18\% balanced accuracy, and the highest MCC (0.889). The gradient boosting approach effectively captures complex patterns in the network traffic data.
+    
+    \item \textbf{Decision Tree} showed strong performance with 99.33\% precision and 92.99\% balanced accuracy. Single tree models can capture decision boundaries effectively for this dataset.
+    
+    \item \textbf{Random Forest} performed well with 98.07\% precision and 86.79\% recall, achieving a balanced accuracy of 92.83\%. The ensemble approach provides robustness.
+    
+    \item \textbf{Logistic Regression} had the lowest recall (76.50\%), indicating it misses more attacks compared to tree-based methods. However, it maintains high precision (97.66\%) and offers faster inference time.
+    
+    \item All models achieved precision above 97\%, indicating very few false positives (benign traffic misclassified as attacks).
+    
+    \item The high AUPRC values (0.91-0.94) demonstrate that the models effectively handle the class imbalance and maintain strong performance across all classification thresholds.
+\end{itemize}
+
+\textbf{Confusion Matrices}:
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.24\textwidth}
+    \includegraphics[width=\textwidth]{figures/rf_binary_cm.pdf}
+    \caption{Random Forest}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.24\textwidth}
+    \includegraphics[width=\textwidth]{figures/lr_binary_cm.pdf}
+    \caption{Logistic Regression}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.24\textwidth}
+    \includegraphics[width=\textwidth]{figures/dt_binary_cm.pdf}
+    \caption{Decision Tree}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.24\textwidth}
+    \includegraphics[width=\textwidth]{figures/xgb_binary_cm.pdf}
+    \caption{XGBoost}
+\end{subfigure}
+\caption{Binary Classification Confusion Matrices}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/binary_classification_comparison.pdf}
+\caption{Binary Classification Performance Comparison}
+\end{figure}
+
+\subsubsection{Multi-Class Classification (Attack Categories)}
+
+\textbf{Performance Summary}:
+
+\begin{table}[H]
+\centering
+\caption{Multi-Class Classification Results}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Model} & \textbf{Precision} & \textbf{Recall} & \textbf{Bal. Acc.} & \textbf{MCC} \\ \midrule
+Random Forest & 0.9365 & 0.9344 & 0.8673 & 0.8895 \\
+Logistic Regression & 0.8891 & 0.8832 & 0.7065 & 0.8006 \\
+Decision Tree & 0.9367 & 0.9338 & 0.8538 & 0.8888 \\
+\textbf{XGBoost} & \textbf{0.9428} & \textbf{0.9392} & \textbf{0.8677} & \textbf{0.8984} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Analysis}:
+
+Multi-class classification results show strong performance in distinguishing between different attack categories:
+
+\begin{itemize}
+    \item \textbf{XGBoost} achieved the best performance with 94.28\% precision, 93.92\% recall, 86.77\% balanced accuracy, and MCC of 0.8984. The gradient boosting effectively handles the complexity of 8 classes.
+    
+    \item \textbf{Random Forest} performed comparably with 93.65\% precision and 86.73\% balanced accuracy. The ensemble method effectively handles multi-class scenarios.
+    
+    \item \textbf{Decision Tree} achieved 93.67\% precision but slightly lower balanced accuracy (85.38\%), showing some difficulty with minority classes.
+    
+    \item \textbf{Logistic Regression} showed noticeably lower performance with 88.91\% precision and 70.65\% balanced accuracy, confirming that linear decision boundaries are insufficient for multi-class attack categorization.
+    
+    \item The high MCC values ($>0.80$) for all models confirm reliable multi-class predictions, with XGBoost being the clear winner.
+    
+    \item The performance drop from binary (93\% balanced accuracy) to multi-class (70-87\%) is expected due to increased classification difficulty with 8 classes versus 2.
+\end{itemize}
+
+
+\textbf{Confusion Matrices}:
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.24\textwidth}
+    \includegraphics[width=\textwidth]{figures/rf_multiclass_cm.pdf}
+    \caption{Random Forest}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.24\textwidth}
+    \includegraphics[width=\textwidth]{figures/lr_multiclass_cm.pdf}
+    \caption{Logistic Regression}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.24\textwidth}
+    \includegraphics[width=\textwidth]{figures/dt_multiclass_cm.pdf}
+    \caption{Decision Tree}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.24\textwidth}
+    \includegraphics[width=\textwidth]{figures/xgb_multiclass_cm.pdf}
+    \caption{XGBoost}
+\end{subfigure}
+\caption{Multi-Class Classification Confusion Matrices}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/multiclass_classification_comparison.pdf}
+\caption{Multi-Class Classification Performance Comparison}
+\end{figure}
+
+\subsection{Anomaly Detection Results}
+
+\textbf{Performance Summary}:
+
+\begin{table}[H]
+\centering
+\caption{Anomaly Detection Results}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Model} & \textbf{Precision} & \textbf{Recall} & \textbf{Bal. Acc.} & \textbf{MCC} \\ \midrule
+Isolation Forest & 0.6967 & 0.7044 & 0.7509 & 0.5009 \\
+MiniBatch K-Means & 0.5393 & 0.5895 & 0.6284 & 0.2536 \\
+\textbf{Elliptic Envelope} & \textbf{0.7463} & \textbf{0.7466} & \textbf{0.7894} & \textbf{0.5788} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Best Performer}: Elliptic Envelope achieved the highest performance across all metrics:
+\begin{itemize}
+    \item Precision: 74.63\%
+    \item Recall: 74.66\%
+    \item Balanced Accuracy: 78.94\%
+    \item MCC: 0.579
+\end{itemize}
+
+\textbf{Analysis}:
+\begin{itemize}
+    \item Elliptic Envelope performed best, suggesting attacks have distinct statistical properties that deviate from the normal data distribution
+    \item Isolation Forest showed strong performance (75.09\% balanced accuracy), validating the tree-based isolation approach for network anomaly detection
+    \item MiniBatch K-Means had lower performance (62.84\% balanced accuracy), indicating that simple two-cluster separation doesn't capture the complexity of attack patterns
+    \item The ~15\% gap between supervised and unsupervised methods is expected and acceptable for zero-day attack detection scenarios
+\end{itemize}
+
+\textbf{Confusion Matrices}:
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.32\textwidth}
+    \includegraphics[width=\textwidth]{figures/isolation_forest_cm.pdf}
+    \caption{Isolation Forest}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.32\textwidth}
+    \includegraphics[width=\textwidth]{figures/kmeans_cm.pdf}
+    \caption{MiniBatch K-Means}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.32\textwidth}
+    \includegraphics[width=\textwidth]{figures/elliptic_envelope_cm.pdf}
+    \caption{Elliptic Envelope}
+\end{subfigure}
+\caption{Anomaly Detection Confusion Matrices}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/anomaly_detection_comparison.pdf}
+\caption{Anomaly Detection Performance Comparison}
+\end{figure}
+
+\subsection{Adversarial Robustness Analysis (Objective 2)}
+
+To evaluate the security of our models against adversarial attacks, we tested model robustness by adding small perturbations to the input features. This simulates sophisticated attackers attempting to evade detection by minimally modifying network traffic characteristics.
+
+\subsubsection{Methodology}
+
+We applied Fast Gradient Sign Method (FGSM)-inspired random perturbations to test data with varying epsilon values ($\epsilon \in \{0.001, 0.01, 0.05, 0.1, 0.2\}$), where epsilon represents the perturbation magnitude as a proportion of feature standard deviation.
+
+\subsubsection{Results}
+
+\begin{table}[H]
+\centering
+\caption{Adversarial Attack Results - Binary Classification}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Model} & \textbf{Original Acc.} & \textbf{Adv. Acc. ($\epsilon=0.2$)} & \textbf{Accuracy Drop} & \textbf{Drop \%} \\ \midrule
+Random Forest & 94.06\% & 59.28\% & 34.78\% & 37.0\% \\
+Logistic Regression & 89.92\% & 74.00\% & 15.92\% & 17.7\% \\
+Decision Tree & 94.35\% & 64.28\% & 30.07\% & 31.9\% \\
+XGBoost & 94.52\% & 61.15\% & 33.37\% & 35.3\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/adversarial_robustness.pdf}
+\caption{Model Robustness to Adversarial Attacks}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/adversarial_confusion_matrices.pdf}
+\caption{Decision Tree: Original vs Adversarial Performance}
+\end{figure}
+
+\subsubsection{Key Findings}
+
+\textbf{Vulnerability Assessment}:
+\begin{itemize}
+    \item \textbf{Extreme Sensitivity}: Tree-based models (including XGBoost) show dramatic performance degradation even with minimal perturbations ($\epsilon=0.001$: 8-12\% accuracy drop)
+    \item \textbf{Robustness Ranking}: Logistic Regression (15.92\% drop) $>$ Decision Tree (30.07\%) $>$ XGBoost (33.37\%) $>$ Random Forest (34.78\%)
+    \item \textbf{Counter-Intuitive Result}: The best-performing models (XGBoost, Random Forest) are the least robust to adversarial attacks
+    \item \textbf{Linear Stability}: Logistic Regression's linear decision boundaries provide inherent robustness to perturbations
+\end{itemize}
+
+\textbf{Attack Effectiveness by Perturbation Level}:
+\begin{itemize}
+    \item $\epsilon = 0.001$ (0.1\% noise): Logistic Regression virtually unaffected; tree models drop 8-12\%
+    \item $\epsilon = 0.01$ (1\% noise): Tree models lose 14-15\% accuracy; LR remains stable
+    \item $\epsilon = 0.05$ (5\% noise): All models show significant degradation; tree models drop to 67-73\%
+    \item $\epsilon = 0.2$ (20\% noise): Tree-based models drop to near-random performance (59-64\%)
+\end{itemize}
+
+\textbf{Security Implications}:
+\begin{itemize}
+    \item \textbf{Critical Vulnerability}: Attackers can evade detection by modifying just 1\% of feature values
+    \item \textbf{Real-World Threat}: Sophisticated attackers could achieve 30-35\% evasion rates with minimal traffic modifications
+    \item \textbf{Production Risk}: Current models are NOT production-ready without adversarial hardening
+    \item \textbf{Attack Surface}: Ensemble complexity in tree-based models creates more exploitation opportunities than simpler models
+\end{itemize}
+
+\subsubsection{Defense Recommendations}
+
+\textbf{Immediate Actions}:
+\begin{enumerate}
+    \item \textbf{Adversarial Training}: Retrain models on adversarially perturbed examples (expected 10-15\% robustness improvement)
+    \item \textbf{Ensemble Defense}: Combine Logistic Regression (robust) with XGBoost (accurate) in a voting ensemble
+    \item \textbf{Input Validation}: Implement statistical anomaly detection on feature distributions to flag suspicious perturbations
+    \item \textbf{Feature Squeezing}: Round or bin feature values to reduce the attack surface
+\end{enumerate}
+
+\textbf{Long-Term Strategies}:
+\begin{itemize}
+    \item Implement gradient masking techniques to obscure model decision boundaries
+    \item Deploy defensive distillation to smooth prediction confidence distributions
+    \item Develop adversarial example detection as a pre-filtering layer
+    \item Continuous monitoring and model retraining with detected adversarial examples
+\end{itemize}
+
+\subsection{Comparative Analysis}
+
+\subsubsection{Supervised vs Unsupervised}
+
+\textbf{Key Findings}:
+\begin{itemize}
+    \item \textbf{Supervised methods achieved 93\% balanced accuracy} (XGBoost) with labeled data, significantly outperforming unsupervised approaches
+    \item Best unsupervised method (Elliptic Envelope) achieved 79\% balanced accuracy
+    \item \textbf{Performance gap}: 14 percentage points between best supervised and unsupervised methods
+    \item Trade-off: Supervised methods require labeled training data but achieve higher accuracy
+    \item Unsupervised methods valuable for zero-day attack detection where labels are unavailable
+    \item For production systems, a hybrid approach combining both supervised and unsupervised methods is recommended
+\end{itemize}
+
+\subsubsection{Computational Performance}
+
+\begin{table}[H]
+\centering
+\caption{Computational Characteristics}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Method} & \textbf{Training Time} & \textbf{Prediction Time} & \textbf{Memory} \\ \midrule
+Random Forest & Moderate & Fast & Moderate \\
+Logistic Regression & Fast & Very Fast & Low \\
+Decision Tree & Fast & Very Fast & Low \\
+XGBoost & Moderate & Fast & Moderate \\
+Isolation Forest & Moderate & Fast & Moderate \\
+K-Means & Fast & Very Fast & Low \\
+Elliptic Envelope & Slow & Moderate & High \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Practical Recommendations}
+
+\begin{itemize}
+    \item \textbf{For Real-Time Detection}: Use Logistic Regression (fast + robust to adversarial attacks)
+    \item \textbf{For High Accuracy}: Use XGBoost with adversarial training
+    \item \textbf{For Resource-Constrained Devices}: Use Decision Tree or K-Means
+    \item \textbf{For Unknown Attack Types}: Use Elliptic Envelope or Isolation Forest
+    \item \textbf{For Adversarial Environments}: Use Logistic Regression or ensemble of LR + XGBoost
+\end{itemize}
+
+\newpage
+
+% 8. Conclusions
+\section{Conclusions}
+
+\subsection{Cybersecurity Events Analysis}
+
+Based on our analysis of the CIC IIoT Dataset 2025:
+
+\textbf{Attack Landscape}:
+\begin{enumerate}
+    \item \textbf{DDoS/DoS Attacks Dominate}: 90\% of attacks are flooding-based, targeting service availability
+    \item \textbf{Port 80 and 1883 Most Targeted}: HTTP and MQTT protocols are primary attack vectors
+    \item \textbf{Edge Devices at Risk}: Edge computing nodes are frequently targeted
+    \item \textbf{Network-Layer Attacks}: Most attacks exploit transport and network layer protocols
+\end{enumerate}
+
+\textbf{Attack Patterns}:
+\begin{itemize}
+    \item \textbf{SYN Flood}: Exploits TCP three-way handshake
+    \item \textbf{UDP Flood}: Overwhelming target with UDP packets
+    \item \textbf{ICMP Flood}: Ping flood attacks
+    \item \textbf{RST-FIN Flood}: TCP connection manipulation
+\end{itemize}
+
+\subsection{Machine Learning Insights}
+
+\textbf{Classification Performance}:
+\begin{itemize}
+    \item \textbf{Binary Classification}: XGBoost achieved best results (99.72\% precision, 93.18\% balanced accuracy, MCC 0.889)
+    \item \textbf{Multi-Class Classification}: XGBoost achieved best results (94.28\% precision, 86.77\% balanced accuracy, MCC 0.898)
+    \item \textbf{Key Features}: TCP flag counts (SYN, ACK, RST, FIN), packet statistics, and time intervals are most discriminative
+    \item \textbf{AUPRC Performance}: All models achieved excellent AUPRC scores (0.91-0.94), indicating robust performance across classification thresholds
+\end{itemize}
+
+\textbf{Anomaly Detection Performance}:
+\begin{itemize}
+    \item Elliptic Envelope most effective (78.94\% balanced accuracy)
+    \item Statistical approaches work well for IIoT attack detection
+    \item Clustering-based methods less effective due to attack diversity
+\end{itemize}
+
+\textbf{Adversarial Robustness}:
+\begin{itemize}
+    \item \textbf{Critical Finding}: All tree-based models vulnerable to adversarial perturbations (30-35\% accuracy drop)
+    \item Logistic Regression most robust (15.92\% drop); Random Forest least robust (34.78\% drop)
+    \item Tree-based models (including XGBoost) extremely sensitive even to minimal perturbations (0.1\% noise)
+    \item Production deployment requires adversarial training and defensive measures
+\end{itemize}
+
+\subsection{Deployment Recommendations}
+
+\textbf{For Production IIoT Systems}:
+\begin{enumerate}
+    \item \textbf{Hybrid Defense Architecture}: 
+    \begin{itemize}
+        \item Primary Layer: Logistic Regression (robust to adversarial attacks)
+        \item Secondary Layer: XGBoost (high accuracy on clean data)
+        \item Tertiary Layer: Elliptic Envelope (zero-day detection)
+    \end{itemize}
+    
+    \item \textbf{Adversarial Hardening}:
+    \begin{itemize}
+        \item Implement adversarial training with perturbed samples
+        \item Deploy input validation layer for anomalous feature distributions
+        \item Use feature squeezing to reduce attack surface
+    \end{itemize}
+    
+    \item \textbf{Feature Engineering}: Focus on TCP flag statistics and packet intervals (most discriminative and harder to perturb without detection)
+    
+    \item \textbf{Continuous Learning}: Regular retraining with new attack patterns and adversarial examples
+    
+    \item \textbf{Threshold Tuning}: Adjust contamination parameters based on security vs. availability trade-offs
+\end{enumerate}
+
+\subsection{Limitations and Future Work}
+
+\textbf{Current Limitations}:
+\begin{itemize}
+    \item Dataset from controlled testbed (may not reflect all real-world scenarios)
+    \item 1-second time windows (may miss longer-duration attacks)
+    \item Class imbalance affects minority attack category detection
+    \item Adversarial testing used random perturbations (not targeted gradient-based attacks)
+    \item No defense mechanisms implemented (only vulnerability assessment)
+\end{itemize}
+
+\textbf{Future Directions}:
+\begin{itemize}
+    \item \textbf{Advanced Adversarial Attacks}: Test PGD, C\&W, and other gradient-based targeted attacks
+    \item \textbf{Defense Implementation}: Evaluate adversarial training, defensive distillation, and certified defenses
+    \item \textbf{Deep Learning}: Explore LSTM and CNN architectures for temporal pattern recognition
+    \item \textbf{Real-Time Detection}: Implement streaming detection pipeline with online learning
+    \item \textbf{Multi-Window Analysis}: Combine 1s, 5s, and 10s windows for comprehensive coverage
+    \item \textbf{Transfer Learning}: Test model generalization across different IIoT environments
+    \item \textbf{Explainable AI}: Implement SHAP or LIME for interpretable attack attribution
+\end{itemize}
+
+\subsection{Final Remarks}
+
+This project successfully demonstrated:
+\begin{itemize}
+    \item Complete data processing pipeline for IIoT cybersecurity
+    \item Comprehensive evaluation of 7 machine learning methods across 3 tasks
+    \item Practical insights for attack detection in industrial environments
+    \item Critical vulnerability assessment through adversarial testing
+    \item Trade-offs between accuracy, speed, computational resources, and security
+\end{itemize}
+
+The results validate that machine learning can effectively detect cyberattacks in IIoT networks, with both supervised and unsupervised approaches showing promise for different deployment scenarios. XGBoost emerged as the best performer for classification tasks, while Elliptic Envelope proved most effective for unsupervised anomaly detection. However, the adversarial robustness analysis reveals that \textbf{current tree-based models are not production-ready without security hardening}. A defense-in-depth approach combining multiple detection layers with adversarial training is essential for real-world deployment in adversarial environments.
+
+\textbf{Key Takeaway}: The pursuit of accuracy alone is insufficient for security-critical applications. Model robustness must be considered as a first-class design constraint alongside traditional performance metrics. The best-performing models (XGBoost, Random Forest) are paradoxically the most vulnerable to adversarial attacks, highlighting the importance of comprehensive security evaluation.
+
+\end{document}

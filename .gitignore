@@ -1,0 +1,38 @@
+# =========================
+# Datasets
+# =========================
+dataset/
+
+# =========================
+# Figures (generated PDFs)
+# =========================
+figures/*.pdf
+
+# =========================
+# LaTeX auxiliary files
+# =========================
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.nav
+*.snm
+*.vrb
+
+# =========================
+# Jupyter
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# OS / Editor junk
+# =========================
+.DS_Store
+Thumbs.db
